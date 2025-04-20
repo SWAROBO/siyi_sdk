@@ -118,6 +118,19 @@ class  CurrentZoomValueMsg:
     float_part = 0
     level=0.0
 
+class SetUTCTimeMsg:
+    seq = 0
+    success=False
+
+class RequestFormatSDCardMsg:
+    seq = 0
+    success=False
+
+class RequestSoftRestartMsg:
+    seq = 0
+    camera_reboot_status = 0
+    gimbal_reset_status = 0
+
 class COMMAND:
     ACQUIRE_FW_VER = '01'
     ACQUIRE_HW_ID = '02'
@@ -134,6 +147,9 @@ class COMMAND:
     SET_DATA_STREAM = '25'
     ABSOLUTE_ZOOM = '0f'
     CURRENT_ZOOM_VALUE = '18'
+    SET_UTC_TIME = '30'
+    FORMAT_SD_CARD = '48'
+    SOFT_RESTART = '80'
 
 
 #############################################
@@ -584,3 +600,19 @@ class SIYIMESSAGE:
         data=""
         cmd_id = COMMAND.CURRENT_ZOOM_VALUE
         return self.encodeMsg(data, cmd_id)
+
+    def requestFormatSDCardMsg(self):
+        data=""
+        cmd_id = COMMAND.FORMAT_SD_CARD
+        return self.encodeMsg(data, cmd_id)
+
+    def setUTCTimeMsg(self, timestamp:int):
+        data = toHex(timestamp, 64)
+        cmd_id = COMMAND.SET_UTC_TIME
+        return self.encodeMsg(data, cmd_id)
+
+    def requestSoftRestartMsg(self, restartCamera, restartGimbal):
+        data = toHex(restartCamera, 8) + toHex(restartGimbal, 8)
+        cmd_id = COMMAND.SOFT_RESTART
+        return self.encodeMsg(data, cmd_id)
+

@@ -64,7 +64,7 @@ class SIYISDK:
         self._g_info_thread = threading.Thread(target=self.gimbalInfoLoop, args=(self._gimbal_info_loop_rate,))
 
         # Gimbal attitude thread @ 10Hz
-        self._gimbal_att_loop_rate = 0.02
+        self._gimbal_att_loop_rate = 1
         self._g_att_thread = threading.Thread(target=self.gimbalAttLoop, args=(self._gimbal_att_loop_rate,))
 
     def resetVars(self):
@@ -88,6 +88,10 @@ class SIYISDK:
         self._request_data_stream_msg = RequestDataStreamMsg()
         self._request_absolute_zoom_msg = RequestAbsoluteZoomMsg()
         self._current_zoom_level_msg = CurrentZoomValueMsg()
+        self._set_utc_time_msg = SetUTCTimeMsg()
+        self._request_format_sd_card_msg = RequestFormatSDCardMsg()
+        self._request_soft_reset_msg = RequestFormatSDCardMsg()
+
         self._last_att_seq = -1
 
         return True
@@ -369,9 +373,15 @@ class SIYISDK:
             elif cmd_id==COMMAND.SET_GIMBAL_ATTITUDE:
                 self.parseSetGimbalAnglesMsg(data, seq)
             elif cmd_id==COMMAND.SET_DATA_STREAM:
-                self.parseRequestStreamMsg()
+                self.parseRequestStreamMsg(data, seq)
             elif cmd_id==COMMAND.CURRENT_ZOOM_VALUE:
                 self.parseCurrentZoomLevelMsg(data, seq)
+            elif cmd_id==COMMAND.SET_UTC_TIME:
+                self.parseSetUTCTimeMsg(data, seq)
+            elif cmd_id==COMMAND.FORMAT_SD_CARD:
+                self.parseRequestFormatSDCardMsg(data, seq)
+            elif cmd_id==COMMAND.SOFT_RESTART:
+                self.parsaRequestSoftRestartMsg(data, seq)
             else:
                 self._logger.warning("CMD ID is not recognized")
         
@@ -675,6 +685,39 @@ class SIYISDK:
         msg = self._out_msg.setGimbalAttitude(int(yaw_deg*10), int(pitch_deg*10))
 
         return self.sendMsg(msg)
+
+    def requestSetUTCTime(self, timestamp: int):
+        """
+        Send request to send attitude stream at specific frequency
+
+        Params
+        ---
+        freq: [uint_8] frequency in Hz (0, 2, 4, 5, 10, 20, 50, 100)
+        """
+        msg = self._out_msg.setUTCTimeMsg(int(timestamp))
+        return self.sendMsg(msg)
+
+    def requestFormatSDCard(self):
+        """
+        Send request to send attitude stream at specific frequency
+
+        Params
+        ---
+        freq: [uint_8] frequency in Hz (0, 2, 4, 5, 10, 20, 50, 100)
+        """
+        msg = self._out_msg.requestFormatSDCardMsg()
+        return self.sendMsg(msg)
+
+    def requestSoftRestart(self, restartCamera, restartGimbal):
+        """
+        Send request to send attitude stream at specific frequency
+
+        Params
+        ---
+        freq: [uint_8] frequency in Hz (0, 2, 4, 5, 10, 20, 50, 100)
+        """
+        msg = self._out_msg.requestSoftRestartMsg(restartCamera, restartGimbal)
+        return self.sendMsg(msg)
     
     def requestDataStreamAttitude(self, freq: int):
         """
@@ -885,6 +928,39 @@ class SIYISDK:
             int_part = int('0x'+msg[0:2], base=16)
             float_part = int('0x'+msg[2:4], base=16)
             self._current_zoom_level_msg.level = int_part + (float_part/10)
+            return True
+        except Exception as e:
+            self._logger.error("Error %s", e)
+            return False
+
+    def parseSetUTCTimeMsg(self, msg: str, seq:int):
+        
+        try:
+            self._set_utc_time_msg.seq = seq
+            self._set_utc_time_msg.success =  bool(int('0x'+msg, base=16))
+
+            return True
+        except Exception as e:
+            self._logger.error("Error %s", e)
+            return False
+
+    def parseRequestFormatSDCardMsg(self, msg: str, seq:int):
+        
+        try:
+            self._request_format_sd_card_msg.seq = seq
+            self._request_format_sd_card_msg.success =  bool(int('0x'+msg, base=16))
+
+            return True
+        except Exception as e:
+            self._logger.error("Error %s", e)
+            return False
+
+    def parsaRequestSoftRestartMsg(self, msg: str, seq:int):
+        try:
+            self._request_soft_reset_msg.seq = seq
+            self._request_soft_reset_msg.camera_reboot_status =  bool(int('0x'+msg, base=16))
+            self._request_soft_reset_msg.gimbal_reset_status =  bool(int('0x'+msg, base=16))
+
             return True
         except Exception as e:
             self._logger.error("Error %s", e)
